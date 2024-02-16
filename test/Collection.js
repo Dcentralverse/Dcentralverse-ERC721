@@ -237,6 +237,12 @@ describe("Collection", function () {
       expect(await collection.tokenURI(1)).to.equal("ipfs://test-folder/1");
     });
 
+    it("should not allow to change base uri if caller is not owner", async function () {
+      await expect(
+        collection.connect(user1).reveal("ipfs://test-folder/")
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
     it("should seal contract permanently and then revert if trying to change base uri", async function () {
       expect(await collection.isSealed()).to.equal(false);
 
@@ -247,6 +253,20 @@ describe("Collection", function () {
       await expect(collection.reveal("ipfs://test-folder/")).to.be.revertedWith(
         "ContractSealed"
       );
+    });
+
+    it("should not allow to seal contract if contract is already sealed", async function () {
+      await collection.sealContractPermanently();
+
+      await expect(collection.sealContractPermanently()).to.be.revertedWith(
+        "ContractSealed"
+      );
+    });
+
+    it("should not allow to seal contract if caller is not owner", async function () {
+      await expect(
+        collection.connect(user1).sealContractPermanently()
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("should not allow to read URI of nonexistent token", async function () {

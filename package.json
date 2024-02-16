@@ -15,14 +15,15 @@
     "chai": "^4.2.0",
     "ethereum-waffle": "^3.0.0",
     "ethers": "^5.0.0",
-    "hardhat": "2.19.5"
+    "hardhat": "2.19.5",
+    "solidity-coverage": "^0.8.7"
   },
   "dependencies": {
     "@nomiclabs/hardhat-etherscan": "^3.0.3",
     "@openzeppelin/contracts": "^4.5.0",
-    "hardhat-contract-sizer": "^2.5.1",
-    "hardhat-gas-reporter": "^1.0.7",
     "dotenv": "^16.0.0",
-    "erc721a": "^3.2.0"
+    "erc721a": "^3.2.0",
+    "hardhat-contract-sizer": "^2.5.1",
+    "hardhat-gas-reporter": "^1.0.7"
   }
 }
