@@ -12,11 +12,12 @@ describe("Collection", function () {
 
     const { chainId } = await ethers.provider.getNetwork();
 
-    const NAME = "Land";
+    const NAME = "DecentralverseLands";
     const SYMBOL = "LND";
+    const BASE_URI = "https://metadata.decentralverse.com/";
 
-    const Collection = await ethers.getContractFactory("Collection");
-    collection = await Collection.deploy(NAME, SYMBOL);
+    const Collection = await ethers.getContractFactory("DecentralverseLands");
+    collection = await Collection.deploy(NAME, SYMBOL, BASE_URI);
     await collection.deployed();
 
     defaultSignData = {
@@ -25,7 +26,7 @@ describe("Collection", function () {
         chainId: chainId,
         verifyingContract: collection.address,
       },
-      value: { account: "", cid: "", price: "" },
+      value: { account: "", price: "", nonce: 0 },
     };
 
     await collection.addSigner(signer.address);
@@ -40,8 +41,8 @@ describe("Collection", function () {
           ...defaultSignData,
           value: {
             account: user1.address,
-            cid: "QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD",
             price: tokenPrice,
+            nonce: 0,
           },
         };
         const signature = await createSignature(signer, signData);
@@ -50,68 +51,52 @@ describe("Collection", function () {
 
         const tx = await collection
           .connect(user1)
-          .mint(
-            "QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD",
-            tokenPrice,
-            signature,
-            { value: tokenPrice }
-          );
+          .mint(tokenPrice, 0, signature, { value: tokenPrice });
 
         const receipt = await tx.wait();
         const eventData = receipt.events.find(({ event }) => event === "Mint");
-        const [tokenId, address, cid, price] = eventData.args;
+        const [tokenId, address, price] = eventData.args;
 
-        expect(tokenId).to.equal(0);
+        expect(tokenId).to.equal(1);
         expect(address).to.equal(user1.address);
-        expect(cid).to.equal("QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD");
         expect(price).to.equal(tokenPrice);
 
         expect(await collection.balanceOf(user1.address)).to.equal(1);
       });
 
-      it("should not allow to mint with same signature twice", async function () {
+      it("should not allow to mint with same nonce twice", async function () {
         const tokenPrice = ethers.utils.parseEther("0.01");
 
         const signData = {
           ...defaultSignData,
           value: {
             account: user1.address,
-            cid: "QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD",
             price: tokenPrice,
+            nonce: 0,
           },
         };
         const signature = await createSignature(signer, signData);
 
         await collection
           .connect(user1)
-          .mint(
-            "QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD",
-            tokenPrice,
-            signature,
-            { value: tokenPrice }
-          );
+          .mint(tokenPrice, 0, signature, { value: tokenPrice });
 
         await expect(
           collection
             .connect(user1)
-            .mint(
-              "QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD",
-              tokenPrice,
-              signature,
-              { value: tokenPrice }
-            )
-        ).to.be.revertedWith("SignatureUsed");
+            .mint(tokenPrice, 0, signature, { value: tokenPrice })
+        ).to.be.revertedWith("NonceUsed");
       });
 
-      it("should not allow to mint if CID is empty string", async function () {
+      it("should not allow to mint if user provides wrong nonce", async function () {
         const tokenPrice = ethers.utils.parseEther("0.01");
 
         const signData = {
           ...defaultSignData,
           value: {
             account: user1.address,
-            cid: "",
             price: tokenPrice,
+            nonce: 0,
           },
         };
         const signature = await createSignature(signer, signData);
@@ -119,32 +104,7 @@ describe("Collection", function () {
         await expect(
           collection
             .connect(user1)
-            .mint("", tokenPrice, signature, { value: tokenPrice })
-        ).to.be.revertedWith("InvalidURI");
-      });
-
-      it("should not allow to mint if user provides wrong CID", async function () {
-        const tokenPrice = ethers.utils.parseEther("0.01");
-
-        const signData = {
-          ...defaultSignData,
-          value: {
-            account: user1.address,
-            cid: "QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD",
-            price: tokenPrice,
-          },
-        };
-        const signature = await createSignature(signer, signData);
-
-        await expect(
-          collection
-            .connect(user1)
-            .mint(
-              "QmSBxebqcuP8GyUxaFVEDqpsmbcjNMxg5y3i1UAHLkhHg5",
-              tokenPrice,
-              signature,
-              { value: tokenPrice }
-            )
+            .mint(tokenPrice, 1, signature, { value: tokenPrice })
         ).to.be.revertedWith("InvalidSignature");
       });
 
@@ -155,8 +115,8 @@ describe("Collection", function () {
           ...defaultSignData,
           value: {
             account: user1.address,
-            cid: "QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD",
             price: tokenPrice,
+            nonce: 0,
           },
         };
         const signature = await createSignature(signer, signData);
@@ -164,12 +124,7 @@ describe("Collection", function () {
         await expect(
           collection
             .connect(user1)
-            .mint(
-              "QmSBxebqcuP8GyUxaFVEDqpsmbcjNMxg5y3i1UAHLkhHg5",
-              tokenPrice.sub(1),
-              signature,
-              { value: tokenPrice.sub(1) }
-            )
+            .mint(tokenPrice.sub(1), 0, signature, { value: tokenPrice.sub(1) })
         ).to.be.revertedWith("InvalidSignature");
       });
 
@@ -180,8 +135,8 @@ describe("Collection", function () {
           ...defaultSignData,
           value: {
             account: user1.address,
-            cid: "QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD",
             price: tokenPrice,
+            nonce: 0,
           },
         };
         const signature = await createSignature(signer, signData);
@@ -189,12 +144,7 @@ describe("Collection", function () {
         await expect(
           collection
             .connect(user1)
-            .mint(
-              "QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD",
-              tokenPrice,
-              signature,
-              { value: tokenPrice.sub(1) }
-            )
+            .mint(tokenPrice, 0, signature, { value: tokenPrice.sub(1) })
         ).to.be.revertedWith("InvalidValue");
       });
     });
@@ -207,8 +157,8 @@ describe("Collection", function () {
           ...defaultSignData,
           value: {
             account: user1.address,
-            cid: "QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD",
             price: tokenPrice,
+            nonce: 0,
           },
         };
         const signature = await createSignature(signer, signData);
@@ -216,12 +166,7 @@ describe("Collection", function () {
         await expect(
           collection
             .connect(user2)
-            .mint(
-              "QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD",
-              tokenPrice,
-              signature,
-              { value: tokenPrice }
-            )
+            .mint(tokenPrice, 0, signature, { value: tokenPrice })
         ).to.be.revertedWith("InvalidSignature");
       });
 
@@ -232,8 +177,8 @@ describe("Collection", function () {
           ...defaultSignData,
           value: {
             account: user1.address,
-            cid: "QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD",
             price: tokenPrice,
+            nonce: 0,
           },
         };
         const signature = await createSignature(user1, signData);
@@ -241,12 +186,7 @@ describe("Collection", function () {
         await expect(
           collection
             .connect(user1)
-            .mint(
-              "QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD",
-              tokenPrice,
-              signature,
-              { value: tokenPrice }
-            )
+            .mint(tokenPrice, 0, signature, { value: tokenPrice })
         ).to.be.revertedWith("InvalidSignature");
       });
     });
@@ -260,24 +200,73 @@ describe("Collection", function () {
         ...defaultSignData,
         value: {
           account: user1.address,
-          cid: "QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD",
           price: tokenPrice,
+          nonce: 0,
         },
       };
       const signature = await createSignature(signer, signData);
 
       await collection
         .connect(user1)
-        .mint(
-          "QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD",
-          tokenPrice,
-          signature,
-          { value: tokenPrice }
-        );
+        .mint(tokenPrice, 0, signature, { value: tokenPrice });
 
-      expect(await collection.tokenURI(0)).to.equal(
-        "ipfs://QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD"
+      expect(await collection.tokenURI(1)).to.equal(
+        "https://metadata.decentralverse.com/1"
       );
+    });
+
+    it("should change base uri", async function () {
+      const tokenPrice = ethers.utils.parseEther("0.01");
+      const signData = {
+        ...defaultSignData,
+        value: {
+          account: user1.address,
+          price: tokenPrice,
+          nonce: 0,
+        },
+      };
+      const signature = await createSignature(signer, signData);
+      await collection
+        .connect(user1)
+        .mint(tokenPrice, 0, signature, { value: tokenPrice });
+
+      const newBaseURI = "ipfs://test-folder/";
+      await collection.reveal(newBaseURI);
+      expect(await collection.baseURI()).to.equal(newBaseURI);
+
+      expect(await collection.tokenURI(1)).to.equal("ipfs://test-folder/1");
+    });
+
+    it("should not allow to change base uri if caller is not owner", async function () {
+      await expect(
+        collection.connect(user1).reveal("ipfs://test-folder/")
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
+
+    it("should seal contract permanently and then revert if trying to change base uri", async function () {
+      expect(await collection.isSealed()).to.equal(false);
+
+      await collection.sealContractPermanently();
+
+      expect(await collection.isSealed()).to.equal(true);
+
+      await expect(collection.reveal("ipfs://test-folder/")).to.be.revertedWith(
+        "ContractSealed"
+      );
+    });
+
+    it("should not allow to seal contract if contract is already sealed", async function () {
+      await collection.sealContractPermanently();
+
+      await expect(collection.sealContractPermanently()).to.be.revertedWith(
+        "ContractSealed"
+      );
+    });
+
+    it("should not allow to seal contract if caller is not owner", async function () {
+      await expect(
+        collection.connect(user1).sealContractPermanently()
+      ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("should not allow to read URI of nonexistent token", async function () {
@@ -287,22 +276,20 @@ describe("Collection", function () {
         ...defaultSignData,
         value: {
           account: user1.address,
-          cid: "QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD",
           price: tokenPrice,
+          nonce: 0,
         },
       };
       const signature = await createSignature(signer, signData);
 
       await collection
         .connect(user1)
-        .mint(
-          "QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD",
-          tokenPrice,
-          signature,
-          { value: tokenPrice }
-        );
+        .mint(tokenPrice, 0, signature, { value: tokenPrice });
 
-      await expect(collection.tokenURI(1)).to.be.revertedWith(
+      await expect(collection.tokenURI(2)).to.be.revertedWith(
+        "URIQueryForNonexistentToken"
+      );
+      await expect(collection.tokenURI(0)).to.be.revertedWith(
         "URIQueryForNonexistentToken"
       );
     });
@@ -316,20 +303,15 @@ describe("Collection", function () {
         ...defaultSignData,
         value: {
           account: user1.address,
-          cid: "QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD",
           price: tokenPrice,
+          nonce: 0,
         },
       };
       const signature = await createSignature(signer, signData);
 
       await collection
         .connect(user1)
-        .mint(
-          "QmbJxj9yTDhDHXYQUHjyz74GxP1VCwF3pkVWCvBTejF3kD",
-          tokenPrice,
-          signature,
-          { value: tokenPrice }
-        );
+        .mint(tokenPrice, 0, signature, { value: tokenPrice });
 
       await expect(await collection.withdrawAllFunds()).to.changeEtherBalance(
         owner,
