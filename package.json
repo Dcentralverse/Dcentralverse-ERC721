@@ -22,7 +22,6 @@
     "@nomiclabs/hardhat-etherscan": "^3.0.3",
     "@openzeppelin/contracts": "^4.5.0",
     "dotenv": "^16.0.0",
-    "erc721a": "^3.2.0",
     "hardhat-contract-sizer": "^2.5.1",
     "hardhat-gas-reporter": "^1.0.7"
   }
