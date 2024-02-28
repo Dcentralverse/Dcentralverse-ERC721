@@ -91,6 +91,42 @@ describe("Collection", function () {
         ).to.be.revertedWith("NonceUsed");
       });
 
+      it("should not allow to mint with same token id", async function () {
+        const tokenPrice = ethers.utils.parseEther("0.01");
+
+        const signData = {
+          ...defaultSignData,
+          value: {
+            account: user1.address,
+            tokenId: 1250,
+            price: tokenPrice,
+            nonce: 0,
+          },
+        };
+        const signature = await createSignature(signer, signData);
+
+        await collection
+          .connect(user1)
+          .mint(1250, tokenPrice, 0, signature, { value: tokenPrice });
+
+        const signData2 = {
+          ...defaultSignData,
+          value: {
+            account: user1.address,
+            tokenId: 1250,
+            price: tokenPrice,
+            nonce: 1,
+          },
+        };
+        const signature2 = await createSignature(signer, signData2);
+
+        await expect(
+          collection
+            .connect(user1)
+            .mint(1250, tokenPrice, 1, signature2, { value: tokenPrice })
+        ).to.be.revertedWith("ERC721: token already minted");
+      });
+
       it("should not allow to mint if user provides wrong nonce", async function () {
         const tokenPrice = ethers.utils.parseEther("0.01");
 
