@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.4;
 
-import "erc721a/contracts/ERC721A.sol";
-import "./SignerRole.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "./SignerRole.sol";
 
 error NonceUsed();
 error InvalidSignature();
 error InvalidValue();
 error InvalidURI();
 
-contract DecentralverseAssets is ERC721A, EIP712, SignerRole {
+contract DecentralverseAssets is ERC721, EIP712, SignerRole {
     bool public isSealed;
     string public baseURI;
 
@@ -25,28 +25,27 @@ contract DecentralverseAssets is ERC721A, EIP712, SignerRole {
         string memory name_,
         string memory symbol_,
         string memory baseURI_
-    ) ERC721A(name_, symbol_) EIP712(name_, "1.0.0") {
+    ) ERC721(name_, symbol_) EIP712(name_, "1.0.0") {
         baseURI = baseURI_;
     }
 
     function mint(
+        uint256 tokenId,
         uint256 price,
         uint256 nonce,
         bytes calldata signature
     ) external payable {
         if (_usedNonces[nonce]) revert NonceUsed();
-        if (!_verify(_hash(msg.sender, price, nonce), signature)) {
+        if (!_verify(_hash(msg.sender, tokenId, price, nonce), signature)) {
             revert InvalidSignature();
         }
         if (msg.value < price) revert InvalidValue();
 
         _usedNonces[nonce] = true;
 
-        uint256 currentTokenId = _currentIndex;
+        _mint(msg.sender, tokenId);
 
-        _safeMint(msg.sender, 1);
-
-        emit Mint(currentTokenId, msg.sender, price);
+        emit Mint(tokenId, msg.sender, price);
     }
 
     function withdrawAllFunds() external onlyOwner {
@@ -71,6 +70,7 @@ contract DecentralverseAssets is ERC721A, EIP712, SignerRole {
 
     function _hash(
         address account,
+        uint256 tokenId,
         uint256 price,
         uint256 nonce
     ) internal view returns (bytes32) {
@@ -79,9 +79,10 @@ contract DecentralverseAssets is ERC721A, EIP712, SignerRole {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "NFT(address account,uint256 price,uint256 nonce)"
+                            "NFT(address account,uint256 tokenId,uint256 price,uint256 nonce)"
                         ),
                         account,
+                        tokenId,
                         price,
                         nonce
                     )
@@ -94,9 +95,5 @@ contract DecentralverseAssets is ERC721A, EIP712, SignerRole {
         bytes calldata signature
     ) internal view returns (bool) {
         return isSigner(ECDSA.recover(digest, signature));
-    }
-
-    function _startTokenId() internal view virtual override returns (uint256) {
-        return 1;
     }
 }

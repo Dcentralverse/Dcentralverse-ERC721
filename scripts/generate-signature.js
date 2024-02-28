@@ -5,8 +5,9 @@ async function main() {
   const name = "Land";
   const collectionAddress = "0xC73B09dfa8618Af23a3A7463A8a7ddE7Dc2a0aef";
   const account = "0x78e7C4C88d44aD2178a2Cf5cC8883a761996e2E9";
-  const nonce = 0;
+  const tokenId = 1250;
   const price = ethers.utils.parseEther("0.01");
+  const nonce = 0;
 
   const { chainId } = await ethers.provider.getNetwork();
   const signData = {
@@ -17,6 +18,7 @@ async function main() {
     },
     value: {
       account: account,
+      tokenId: tokenId,
       price: price,
       nonce: nonce,
     },

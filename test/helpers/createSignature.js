@@ -1,6 +1,6 @@
 const createSignature = async (signer, { domain, value }) => {
   const { name, chainId, verifyingContract } = domain;
-  const { account, price, nonce } = value;
+  const { account, tokenId, price, nonce } = value;
 
   const signature = await signer._signTypedData(
     // Domain
@@ -14,6 +14,7 @@ const createSignature = async (signer, { domain, value }) => {
     {
       NFT: [
         { name: "account", type: "address" },
+        { name: "tokenId", type: "uint256" },
         { name: "price", type: "uint256" },
         { name: "nonce", type: "uint256" },
       ],
@@ -21,6 +22,7 @@ const createSignature = async (signer, { domain, value }) => {
     // Value
     {
       account,
+      tokenId,
       price,
       nonce,
     }

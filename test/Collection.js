@@ -41,6 +41,7 @@ describe("Collection", function () {
           ...defaultSignData,
           value: {
             account: user1.address,
+            tokenId: 1250,
             price: tokenPrice,
             nonce: 0,
           },
@@ -51,17 +52,18 @@ describe("Collection", function () {
 
         const tx = await collection
           .connect(user1)
-          .mint(tokenPrice, 0, signature, { value: tokenPrice });
+          .mint(1250, tokenPrice, 0, signature, { value: tokenPrice });
 
         const receipt = await tx.wait();
         const eventData = receipt.events.find(({ event }) => event === "Mint");
         const [tokenId, address, price] = eventData.args;
 
-        expect(tokenId).to.equal(1);
+        expect(tokenId).to.equal(1250);
         expect(address).to.equal(user1.address);
         expect(price).to.equal(tokenPrice);
 
         expect(await collection.balanceOf(user1.address)).to.equal(1);
+        expect(await collection.ownerOf(1250)).to.equal(user1.address);
       });
 
       it("should not allow to mint with same nonce twice", async function () {
@@ -71,6 +73,7 @@ describe("Collection", function () {
           ...defaultSignData,
           value: {
             account: user1.address,
+            tokenId: 1250,
             price: tokenPrice,
             nonce: 0,
           },
@@ -79,13 +82,49 @@ describe("Collection", function () {
 
         await collection
           .connect(user1)
-          .mint(tokenPrice, 0, signature, { value: tokenPrice });
+          .mint(1250, tokenPrice, 0, signature, { value: tokenPrice });
 
         await expect(
           collection
             .connect(user1)
-            .mint(tokenPrice, 0, signature, { value: tokenPrice })
+            .mint(1250, tokenPrice, 0, signature, { value: tokenPrice })
         ).to.be.revertedWith("NonceUsed");
+      });
+
+      it("should not allow to mint with same token id", async function () {
+        const tokenPrice = ethers.utils.parseEther("0.01");
+
+        const signData = {
+          ...defaultSignData,
+          value: {
+            account: user1.address,
+            tokenId: 1250,
+            price: tokenPrice,
+            nonce: 0,
+          },
+        };
+        const signature = await createSignature(signer, signData);
+
+        await collection
+          .connect(user1)
+          .mint(1250, tokenPrice, 0, signature, { value: tokenPrice });
+
+        const signData2 = {
+          ...defaultSignData,
+          value: {
+            account: user1.address,
+            tokenId: 1250,
+            price: tokenPrice,
+            nonce: 1,
+          },
+        };
+        const signature2 = await createSignature(signer, signData2);
+
+        await expect(
+          collection
+            .connect(user1)
+            .mint(1250, tokenPrice, 1, signature2, { value: tokenPrice })
+        ).to.be.revertedWith("ERC721: token already minted");
       });
 
       it("should not allow to mint if user provides wrong nonce", async function () {
@@ -95,6 +134,7 @@ describe("Collection", function () {
           ...defaultSignData,
           value: {
             account: user1.address,
+            tokenId: 1250,
             price: tokenPrice,
             nonce: 0,
           },
@@ -104,7 +144,7 @@ describe("Collection", function () {
         await expect(
           collection
             .connect(user1)
-            .mint(tokenPrice, 1, signature, { value: tokenPrice })
+            .mint(1250, tokenPrice, 1, signature, { value: tokenPrice })
         ).to.be.revertedWith("InvalidSignature");
       });
 
@@ -115,6 +155,7 @@ describe("Collection", function () {
           ...defaultSignData,
           value: {
             account: user1.address,
+            tokenId: 1250,
             price: tokenPrice,
             nonce: 0,
           },
@@ -124,7 +165,30 @@ describe("Collection", function () {
         await expect(
           collection
             .connect(user1)
-            .mint(tokenPrice.sub(1), 0, signature, { value: tokenPrice.sub(1) })
+            .mint(1250, tokenPrice.sub(1), 0, signature, {
+              value: tokenPrice.sub(1),
+            })
+        ).to.be.revertedWith("InvalidSignature");
+      });
+
+      it("should not allow to mint if user provides wrong token id", async function () {
+        const tokenPrice = ethers.utils.parseEther("0.01");
+
+        const signData = {
+          ...defaultSignData,
+          value: {
+            account: user1.address,
+            tokenId: 1250,
+            price: tokenPrice,
+            nonce: 0,
+          },
+        };
+        const signature = await createSignature(signer, signData);
+
+        await expect(
+          collection
+            .connect(user1)
+            .mint(1251, tokenPrice, 0, signature, { value: tokenPrice })
         ).to.be.revertedWith("InvalidSignature");
       });
 
@@ -135,6 +199,7 @@ describe("Collection", function () {
           ...defaultSignData,
           value: {
             account: user1.address,
+            tokenId: 1250,
             price: tokenPrice,
             nonce: 0,
           },
@@ -144,7 +209,7 @@ describe("Collection", function () {
         await expect(
           collection
             .connect(user1)
-            .mint(tokenPrice, 0, signature, { value: tokenPrice.sub(1) })
+            .mint(1250, tokenPrice, 0, signature, { value: tokenPrice.sub(1) })
         ).to.be.revertedWith("InvalidValue");
       });
     });
@@ -157,6 +222,7 @@ describe("Collection", function () {
           ...defaultSignData,
           value: {
             account: user1.address,
+            tokenId: 1250,
             price: tokenPrice,
             nonce: 0,
           },
@@ -166,7 +232,7 @@ describe("Collection", function () {
         await expect(
           collection
             .connect(user2)
-            .mint(tokenPrice, 0, signature, { value: tokenPrice })
+            .mint(1250, tokenPrice, 0, signature, { value: tokenPrice })
         ).to.be.revertedWith("InvalidSignature");
       });
 
@@ -177,6 +243,7 @@ describe("Collection", function () {
           ...defaultSignData,
           value: {
             account: user1.address,
+            tokenId: 1250,
             price: tokenPrice,
             nonce: 0,
           },
@@ -186,7 +253,7 @@ describe("Collection", function () {
         await expect(
           collection
             .connect(user1)
-            .mint(tokenPrice, 0, signature, { value: tokenPrice })
+            .mint(1250, tokenPrice, 0, signature, { value: tokenPrice })
         ).to.be.revertedWith("InvalidSignature");
       });
     });
@@ -200,6 +267,7 @@ describe("Collection", function () {
         ...defaultSignData,
         value: {
           account: user1.address,
+          tokenId: 1250,
           price: tokenPrice,
           nonce: 0,
         },
@@ -208,10 +276,10 @@ describe("Collection", function () {
 
       await collection
         .connect(user1)
-        .mint(tokenPrice, 0, signature, { value: tokenPrice });
+        .mint(1250, tokenPrice, 0, signature, { value: tokenPrice });
 
-      expect(await collection.tokenURI(1)).to.equal(
-        "https://metadata.decentralverse.com/1"
+      expect(await collection.tokenURI(1250)).to.equal(
+        "https://metadata.decentralverse.com/1250"
       );
     });
 
@@ -221,6 +289,7 @@ describe("Collection", function () {
         ...defaultSignData,
         value: {
           account: user1.address,
+          tokenId: 1250,
           price: tokenPrice,
           nonce: 0,
         },
@@ -228,13 +297,15 @@ describe("Collection", function () {
       const signature = await createSignature(signer, signData);
       await collection
         .connect(user1)
-        .mint(tokenPrice, 0, signature, { value: tokenPrice });
+        .mint(1250, tokenPrice, 0, signature, { value: tokenPrice });
 
       const newBaseURI = "ipfs://test-folder/";
       await collection.reveal(newBaseURI);
       expect(await collection.baseURI()).to.equal(newBaseURI);
 
-      expect(await collection.tokenURI(1)).to.equal("ipfs://test-folder/1");
+      expect(await collection.tokenURI(1250)).to.equal(
+        "ipfs://test-folder/1250"
+      );
     });
 
     it("should not allow to change base uri if caller is not owner", async function () {
@@ -276,6 +347,7 @@ describe("Collection", function () {
         ...defaultSignData,
         value: {
           account: user1.address,
+          tokenId: 1250,
           price: tokenPrice,
           nonce: 0,
         },
@@ -284,13 +356,13 @@ describe("Collection", function () {
 
       await collection
         .connect(user1)
-        .mint(tokenPrice, 0, signature, { value: tokenPrice });
+        .mint(1250, tokenPrice, 0, signature, { value: tokenPrice });
 
-      await expect(collection.tokenURI(2)).to.be.revertedWith(
-        "URIQueryForNonexistentToken"
+      await expect(collection.tokenURI(1251)).to.be.revertedWith(
+        "ERC721Metadata: URI query for nonexistent token"
       );
       await expect(collection.tokenURI(0)).to.be.revertedWith(
-        "URIQueryForNonexistentToken"
+        "ERC721Metadata: URI query for nonexistent token"
       );
     });
   });
@@ -303,6 +375,7 @@ describe("Collection", function () {
         ...defaultSignData,
         value: {
           account: user1.address,
+          tokenId: 1250,
           price: tokenPrice,
           nonce: 0,
         },
@@ -311,7 +384,7 @@ describe("Collection", function () {
 
       await collection
         .connect(user1)
-        .mint(tokenPrice, 0, signature, { value: tokenPrice });
+        .mint(1250, tokenPrice, 0, signature, { value: tokenPrice });
 
       await expect(await collection.withdrawAllFunds()).to.changeEtherBalance(
         owner,
